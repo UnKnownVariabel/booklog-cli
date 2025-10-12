@@ -11,7 +11,7 @@ mod isbn;
 #[derive(Debug, Serialize)]
 struct Book {
     isbn: String,
-    name: String,
+    title: String,
     author: String,
     rating: u8,
     reading_date: NaiveDate,
@@ -22,9 +22,9 @@ impl fmt::Display for Book {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "ISBN: {}\nNAME: {}\nAUTHOR: {}\nRATING: {}/10\nREADING DATE: {}",
+            "ISBN: {}\nTITLE: {}\nAUTHOR: {}\nRATING: {}/10\nREADING DATE: {}",
             self.isbn,
-            self.name,
+            self.title,
             self.author,
             self.rating,
             self.reading_date.format("%Y-%m-%d"),
@@ -61,8 +61,17 @@ fn add_new_book() {
         }
         println!("wrong ISBN format");
     };
-    let name = ask("Please input the books name: ");
-    let author = ask("Please input the authors name: ");
+    let title: String;
+    let author: String;
+    println!("Requesting book information from openlibrary.org");
+    if let Ok((_title, _author)) = isbn::api::request_book_with_isbn(&isbn) {
+        author = _author;
+        title = _title;
+    } else {
+        println!("Failed to call isbn api");
+        title = ask("Please input the books title: ");
+        author = ask("Please input the authors name: ");
+    }
     let rating = loop {
         let answer = ask("Please rate the book from 0 to 10: ");
         if let Ok(rating) = answer.parse::<u8>() {
@@ -74,7 +83,7 @@ fn add_new_book() {
     };
     let book = Book {
         isbn: isbn,
-        name: name,
+        title: title,
         author: author,
         rating: rating,
         reading_date: Local::now().date_naive(),

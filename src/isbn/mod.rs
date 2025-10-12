@@ -1,3 +1,5 @@
+pub mod api;
+
 fn check_10_digit_isbn(isbn: &str) -> bool {
     let mut sum = 0;
     for i in 0..10 {
