@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::env;
 use std::error::Error;
 use std::fmt;
-use std::fs::File;
+use std::fs::{File, OpenOptions};
 use std::io::{self, Write};
 
 mod config;
@@ -45,11 +45,22 @@ fn ask(question: &str) -> String {
 
 fn save_book(book: Book) -> Result<(), Box<dyn Error>> {
     let path = &config::get_config().book_file;
-    let file = File::create(path).expect("Failed to create file books.csv");
-    let mut wtr = csv::Writer::from_writer(file);
 
-    wtr.serialize(book).expect("Failed to serialize book");
-    let _ = wtr.flush();
+    // Open the file in append mode
+    let file = OpenOptions::new()
+        .append(true)
+        .create(true) // create it if it doesn't exist
+        .open(path)?;
+
+    // Don't write headers again
+    let mut wtr = csv::WriterBuilder::new()
+        .has_headers(false)
+        .from_writer(file);
+
+    // Serialize and write the book record
+    wtr.serialize(book)?;
+    wtr.flush()?;
+
     Ok(())
 }
 
@@ -96,7 +107,6 @@ fn add_new_book() {
 }
 fn retrieve_books_from_file(path: &str) -> Result<Vec<Book>, Box<dyn Error>> {
     let mut books = Vec::new();
-    println!("path: {}", path);
     let mut rdr = csv::Reader::from_path(path)?;
     for result in rdr.deserialize() {
         let book: Book = result?;
@@ -115,7 +125,7 @@ fn list_all_books() {
         }
     };
     for book in books {
-        println!("{}", book);
+        println!("\n{}", book);
     }
 }
 
