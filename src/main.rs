@@ -134,11 +134,29 @@ fn run_option(option: &str) {
     }
 }
 
+fn menu() {
+    let msg = r#"
+#### MENU ####
+type option then enter:
+[n] new book entry
+[l] list old book entrys
+[q] quit
+"#;
+    loop {
+        println!("{}", msg);
+        let input = ask("# ");
+        if input.starts_with('q') {
+            break;
+        }
+        run_option(&input);
+    }
+}
+
 fn main() {
     config::init_config();
     let args: Vec<String> = env::args().collect();
     if args.len() < 2 {
-        println!("nothing to do with so few arguments");
+        menu();
         return;
     }
     if (&args[1]).starts_with('-') {
