@@ -1,38 +1,13 @@
-use chrono::{Local, NaiveDate};
-use serde::{Deserialize, Serialize};
+use chrono::Local;
 use std::env;
-use std::error::Error;
-use std::fmt;
-use std::fs::{File, OpenOptions};
 use std::io::{self, Write};
 
 mod config;
 mod isbn;
+mod types;
+use types::Book;
 
-#[derive(Debug, Serialize, Deserialize)]
-struct Book {
-    isbn: String,
-    title: String,
-    author: String,
-    rating: u8,
-    reading_date: NaiveDate,
-    has_review: bool,
-}
-
-impl fmt::Display for Book {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "ISBN: {}\nTITLE: {}\nAUTHOR: {}\nRATING: {}/10\nREADING DATE: {}",
-            self.isbn,
-            self.title,
-            self.author,
-            self.rating,
-            self.reading_date.format("%Y-%m-%d"),
-        )
-    }
-}
-
+mod file_loading;
 fn ask(question: &str) -> String {
     print!("{}", question);
     io::stdout().flush().unwrap();
@@ -41,27 +16,6 @@ fn ask(question: &str) -> String {
         .read_line(&mut input)
         .expect("Failed to read line");
     input.trim().to_string()
-}
-
-fn save_book(book: Book) -> Result<(), Box<dyn Error>> {
-    let path = &config::get_config().book_file;
-
-    // Open the file in append mode
-    let file = OpenOptions::new()
-        .append(true)
-        .create(true) // create it if it doesn't exist
-        .open(path)?;
-
-    // Don't write headers again
-    let mut wtr = csv::WriterBuilder::new()
-        .has_headers(false)
-        .from_writer(file);
-
-    // Serialize and write the book record
-    wtr.serialize(book)?;
-    wtr.flush()?;
-
-    Ok(())
 }
 
 fn add_new_book() {
@@ -103,24 +57,14 @@ fn add_new_book() {
         has_review: false,
     };
     println!("this book is added to the file book: \n{}", book);
-    let _ = save_book(book);
-}
-fn retrieve_books_from_file(path: &str) -> Result<Vec<Book>, Box<dyn Error>> {
-    let mut books = Vec::new();
-    let mut rdr = csv::Reader::from_path(path)?;
-    for result in rdr.deserialize() {
-        let book: Book = result?;
-        books.push(book);
-    }
-    Ok(books)
+    let _ = file_loading::save_book(book);
 }
 
 fn list_all_books() {
-    let path = &config::get_config().book_file;
-    let books = match retrieve_books_from_file(path) {
+    let books = match file_loading::retrieve_books() {
         Ok(v) => v,
         Err(e) => {
-            println!("failed to read book file att path {} because: {}", path, e);
+            println!("failed to read book file because: {}", e);
             return;
         }
     };
